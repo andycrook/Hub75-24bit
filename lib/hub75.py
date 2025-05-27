@@ -2219,9 +2219,9 @@ class Hub75:
                         # b = color & 0x1F
 
                         if shading == 3:
-                            r = int((r / 255) * (color_base[0] / 255) * 255)
-                            g = int((g / 255) * (color_base[1] / 255) * 255)
-                            b = int((b / 255) * (color_base[2] / 255) * 255)
+                            r = max(0, min(255, int((r / 255) * (color_base[0] / 255) * 255)))
+                            g = max(0, min(255, int((g / 255) * (color_base[1] / 255) * 255)))
+                            b = max(0, min(255, int((b / 255) * (color_base[2] / 255) * 255)))
 
                             # r=int((color_base[0]/31*r))
                             # g=int((color_base[1]/31*g))
