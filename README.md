@@ -224,5 +224,7 @@ Loads a .obj 3D model file. For textured models, load in a bmp
 using load_bmp(texture_filename,0,0, return_data=1). This returns
 width,height and the texture data to put into the 3DOBJ object.
 
+TBC - add about lighting, rendering keyframe animating and generating animations...
+
 
 ###
