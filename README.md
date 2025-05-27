@@ -3,7 +3,6 @@
 
 **Author:** Andy Crook  
 **Platform:** Raspberry Pi Pico 2W
-
 **Target Display:** 64x64 HUB75 RGB LED matrix  
 **License:** GPL-3  
 
