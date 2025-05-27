@@ -216,3 +216,13 @@ Draws a string using the loaded font. Supports:
 Renders the text from the pixel buffer with shadow or background.
 
 ---
+
+### Geometry Utilities
+
+### `load_obj(filename)`
+Loads a .obj 3D model file. For textured models, load in a bmp
+using load_bmp(texture_filename,0,0, return_data=1). This returns
+width,height and the texture data to put into the 3DOBJ object.
+
+
+###
