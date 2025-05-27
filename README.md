@@ -2,28 +2,29 @@
 # HUB75 MicroPython LED Matrix Driver
 
 **Author:** Andy Crook  
-**Platform:** Raspberry Pi Pico  
+**Platform:** Raspberry Pi Pico 2W
 **Target Display:** 64x64 HUB75 RGB LED matrix  
-**License:** MIT  
-**Repository:** [andycrook/hub75](https://github.com/andycrook)
+**License:** GPL-3  
 
 ---
 
 ## Overview
 
-This is a high-performance MicroPython driver for HUB75-style RGB LED matrices (64x64). It features:
+This is a MicroPython driver for HUB75-style RGB LED matrices (64x64). It features:
 
 - Full 24-bit color support using 8-bit binary-coded modulation (BCM)
 - Hardware-accelerated drawing with PIO and triple-buffering
 - BMP loading (24/32-bit) with transparency and gamma correction
 - BDF and custom font rendering
-- 3D OBJ model support with per-face normals and animation
-- Particle emission system
-- Advanced blending modes (multiply, screen, overlay, etc.)
-- Marquee and scrolling text
-- Rotation, flipping, and other image operations
+- 3D OBJ textured model support with per-face normals and keyframed animation
+- support with Catmull rom spline interpolation
+- Particle emission system (simple)
+- Advanced blending modes (multiply, screen, overlay, etc.) for bmp and framebuffers
+- BDF font, custom mfont format, text effects and marquee scrolling text
 
 This driver leverages the Raspberry Pi Pico's PIO and multi-core features for performance.
+One core sends data to the display with BCM timings and the other is free for all library
+drawing operations.
 
 ---
 
@@ -63,7 +64,7 @@ Hub75(
 Initializes the HUB75 matrix controller. It sets up three PIO state machines:
 - `led_data`: streams RGB bitplane data to the matrix
 - `address_counter`: selects row address lines
-- `output`: handles brightness timing and frame display
+- `output`: handles BCM timing and frame display
 
 Also sets up gamma LUTs, pixel lookup tables, and starts a separate thread for continuous frame updates.
 
@@ -77,26 +78,30 @@ The following methods provide 2D drawing capabilities for the matrix, using RGB 
 
 #### `set_pixel(x, y, g, r, b, vx, vy, vw, vh)`
 Draw a single pixel at `(x, y)` with RGB color. Clipped to viewport (`vx, vy, vw, vh`).
+set_pixel is the core of most drawing operations. It's in viper for performance but this
+means that it has to have the 4 ints for boundaries passed. This can be reworked with a
+function calling this viper function for a simpler user function call, as the cost of a few
+us of time.
 
 #### `get_pixel(x, y) -> (r, g, b)`
 Returns the RGB color of the pixel at `(x, y)` as a tuple.
 
-#### `hline(x, y, length, g, r, b)`
+#### `hline(x, y, length, r,g,b)`
 Draws a horizontal line from `(x, y)` of given length and color.
 
-#### `vline(x, y, length, g, r, b)`
+#### `vline(x, y, length, r,g,b)`
 Draws a vertical line from `(x, y)` of given length and color.
 
-#### `line(x0, y0, x1, y1, g, r, b)`
+#### `line(x0, y0, x1, y1, r,g,b)`
 Draws a line from `(x0, y0)` to `(x1, y1)` using Bresenham's algorithm.
 
-#### `box(x, y, width, height, g, r, b, filled)`
+#### `box(x, y, width, height, r,g,b, filled)`
 Draws a rectangle. If `filled` is true, fills the box with color.
 
-#### `ellipse(x, y, rx, ry, g, r, b, filled)`
+#### `ellipse(x, y, rx, ry, r,g,b, filled)`
 Draws an ellipse centered at `(x, y)` with radii `rx`, `ry`. Fills it if `filled` is true.
 
-#### `polygon(points, g, r, b, closed=True)`
+#### `polygon(points, r,g,b, closed=True)`
 Draws lines between each point in `points`. Closes the shape if `closed=True`.
 
 ---
@@ -145,15 +150,18 @@ Loads a 24/32-bit BMP file to the matrix. Supports:
 - Buffered mode (stores as sprite)
 - Return mode (returns raw RGB data)
 - Blend modes: `"alpha"`, `"multiply"`, `"screen"`, `"lighten"`, `"darken"`, `"add"`
+- Gamma of 2.2 is the default and recommended to make images look good on an LED matrix
 
 #### `show_bmp(index, x, y)`
-Draws a previously loaded buffered BMP at `(x, y)`.
+Draws a previously loaded buffered BMP at `(x, y)`
+This works with buffer mode, and the pixel data is internally held so that it can be redrawn
+at arbitrary locations without having to load in a bmp.
 
 #### `count_bmp() -> (count, [lengths])`
-Returns number of buffered BMPs and pixel counts.
+Returns number of buffered BMPs in memory and pixel counts.
 
 #### `erase_bmp(index)`
-Removes a buffered BMP from memory.
+Removes a buffered BMP from memory from the specified index
 
 ---
 
@@ -183,21 +191,26 @@ Loads a BDF font (expensive, not recommended for full fonts).
 
 #### `save_minifont(path)`
 Saves current font to a compact `.mfont` format (binary).
+This is the preferred font format. External py mfont editor available
+to edit mfont glyphs directly.
 
 #### `load_minifont(path)`
 Loads a `.mfont` file.
 
 #### `monospace_digits(font)`
-Forces all digits in a font to have the same width.
+Forces all digits in a font to have the same width and x-advance.
 
 #### `draw_char(x, y, char, color, BGcolor, background_mode=0, buffer=0)`
-Draws a character from the loaded font.
+Draws a character from the loaded font. Helper for draw_text.
 
 #### `draw_text(x, y, text, color, BGcolor, background_mode=0, buffer=2, shadow=0, marquee=False)`
 Draws a string using the loaded font. Supports:
 - Background fill modes
 - Shadow direction
 - Marquee support (repeats text)
+- For speed, buffer=0 and the function will draw to the screen directly. With buffer mode,
+- the text is held in a buffer and further pixel operations can be performed, like
+- background surround, shadow effects, and marquee drawing.
 
 #### `draw_text_buffer(x, y, color, BGcolor, shadow=0)`
 Renders the text from the pixel buffer with shadow or background.
